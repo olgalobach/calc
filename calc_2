@@ -1,0 +1,138 @@
+#include <iostream>
+#include <map>
+#include <list>
+#include <string>
+#include <algorithm>
+
+bool errors(std::string v){
+    if (v.find("-+") != std::string::npos || v.find("++") != std::string::npos){
+        std::cout << "Ошибка! Неверный ввод!";
+        return false;
+    }
+    if (std::find_if(v.begin(), v.end(), [](auto& a){return std::isdigit(a);}) == v.end()){
+        std::cout << "Ошибка! Неверный ввод!";
+        return false;
+    }
+    return true;
+}
+double solve(std::string v) {
+    if (v.find("--") != std::string::npos){
+        v = v.replace(v.find("--"), 2, "+");
+    }
+    if (v.find("+-") != std::string::npos){
+        v = v.replace(v.find("+-"), 2, "-");
+    }
+    if (!errors(v)){
+        return 0;
+    }
+    std::map<char, int> operations;
+    char tmp_sign = 0;
+    operations['*'] = 1;
+    operations['/'] = 1;
+    operations['+'] = 2;
+    operations['-'] = 2;
+    bool first_oper = false; // операция с первым приорететом
+    std::string tmp_numb;
+    double first_vr;
+    std::list<double> numbers;
+    std::list<char> signs;
+    for (size_t i = 0; i < v.size(); ++i) {
+        if (std::isdigit(v[i]) || (v[i] == '.') || (i == 0 && v[i] == '-')) {
+            tmp_numb += v[i];
+            if (v[i] == '.' || (i == 0 && v[i] == '-')) {
+                continue;
+            }
+        }
+        if (!(std::isdigit(v[i])) || (i == v.size() - 1)) {
+            if (!(tmp_numb.empty())) {
+                if (first_oper) {
+                    switch (tmp_sign) {
+                        case '*':
+                            first_vr = numbers.back() * std::stod(tmp_numb);
+                            break;
+                        case '/':
+                            first_vr = numbers.back() / std::stod(tmp_numb);
+                    }
+                    numbers.pop_back();
+                    numbers.push_back(first_vr);
+                } else {
+                    numbers.push_back(std::stod(tmp_numb));
+                }
+                tmp_numb.clear();
+                tmp_sign = v[i];
+                if (operations[v[i]] == 1 || (i == v.size() - 1)) {
+                    first_oper = true;
+                } else {
+                    first_oper = false;
+                    signs.push_back(v[i]);
+                }
+            }
+        }
+    }
+    if (signs.empty()) {
+        return numbers.front();
+    }
+    double final_vr;
+    int n = signs.size();
+    for (size_t i = 0; i < n; ++i) {
+        if (i == 0) {
+            final_vr = numbers.front();
+            numbers.pop_front();
+        }
+        switch (signs.front()) {
+            case '+':
+                final_vr += numbers.front();
+                break;
+            case '-':
+                final_vr -= numbers.front();
+        }
+        numbers.pop_front();
+        signs.pop_front();
+    }
+    return final_vr;
+}
+
+double solve_main(std::string vr) {
+    int count_open;
+    std::string tmp_res;
+    std::list<size_t> index;
+    if (vr.find('(') == std::string::npos && vr.find(')') == std::string::npos){
+        return solve(vr);
+    }
+    if (std::count(vr.begin(), vr.end(), '(') != std::count(vr.begin(), vr.end(), ')')){
+        std::cout<<"Ошибка! Неверное число скобок";
+        return 0;
+    }
+    bool bCanExit = false;
+    while (!bCanExit){
+        count_open = 0;
+        for (size_t i = 0; i < vr.length(); ++i) {
+            if (vr[i] == '(') {
+                count_open += 1;
+                index.push_back(i);
+            }
+            if (vr[i] == ')') {
+                tmp_res = std::to_string(solve(vr.substr(index.back() + 1, i - index.back() - 1)));
+                count_open -= 1;
+                vr = vr.replace(index.back(), i - index.back() + 1, tmp_res);
+                index.pop_back();
+                if (vr.find('(') == std::string::npos){
+                    bCanExit = true;
+                }
+                break;
+            }
+        }
+    }
+
+    return solve(vr);
+}
+
+int main(int argc, const char *argv[]) {
+    if ((argc != 2)) {
+        std::cerr << "Error: Use one parameter!\n";
+        return 0;
+    }
+    std::string math_expr = argv[1];
+    std::cout << solve_main(math_expr);
+    return 0;
+}
